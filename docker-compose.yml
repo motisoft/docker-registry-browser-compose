@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+
+  nginx:
+    image: public.ecr.aws/nginx/nginx    
+    volumes:
+      - type: bind
+        source: ./certs
+        target: "/etc/nginx/certs"
+      - type: bind
+        source: ./nginx
+        target: "/etc/nginx/conf.d"
+    ports:
+      - "443:443"
+      - "80:80"
+    network_mode: host
+    restart: on-failure
+
+  browser:
+    image: klausmeyer/docker-registry-browser
+    environment:
+      - "DOCKER_REGISTRY_URL=http://localhost:5000"
+      - "ENABLE_DELETE_IMAGES=true"
+      - "PUBLIC_REGISTRY_URL=${PUBLIC_REGISTRY_URL}"
+    ports:
+      - "8080:8080"
+    network_mode: host
+    restart: on-failure
+
+  registry:
+    image: public.ecr.aws/docker/library/registry
+    environment:
+      - "REGISTRY_STORAGE_DELETE_ENABLED=true"    
+    volumes:
+      - "registry-vol:/var/lib/registry"
+    ports:
+      - "5000:5000"
+    network_mode: host
+    restart: on-failure
+
+volumes:
+  registry-vol:
+    driver: local
+    driver_opts:
+      type: "cifs"
+      o: "addr=${VOLUME_SHARE_SERVER},username=${VOLUME_SHARE_USER},password=${VOLUME_SHARE_PASSWORD},file_mode=0777,dir_mode=0777"
+      device: "${VOLUME_SHARE_PATH}"
